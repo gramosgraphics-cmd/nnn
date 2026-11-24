@@ -1,0 +1,55 @@
+[project]
+name = "baas_platform"
+version = "0.1.0"
+description = "Plataforma Backend-as-a-Service abierta (alternativa a Supabase) con FastAPI y PostgreSQL"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "websockets>=12",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29",
+    "pydantic[email]>=2.7",
+    "pydantic-settings>=2.3",
+    "alembic>=1.16",
+    "httpx>=0.27",
+    "pyjwt>=2.8",
+    "bcrypt>=4.1",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+# Solo si quieres guardar los archivos en S3/MinIO en vez de la carpeta local (STORAGE_BACKEND=s3)
+s3 = ["boto3>=1.34"]
+# Extras opcionales de uvicorn (uvloop/httptools). En Android/Termux NO los instales.
+fast = ["uvicorn[standard]>=0.30"]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "moto[s3]>=5.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*", "config*"]
+
+# Alembic lee su configuración desde aquí (no hace falta alembic.ini)
+[tool.alembic]
+script_location = "%(here)s/migrations"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.setuptools.package-data]
+"app.dashboard" = ["static/*"]

@@ -1,0 +1,110 @@
+# Peticiones de ejemplo para la extensión "REST Client" de VS Code (humao.rest-client).
+# 1) Crea un proyecto en http://localhost:8000/dashboard  2) pega aquí sus claves  3) pulsa "Send Request".
+
+@url = http://localhost:8000
+@anon = PEGA_AQUI_LA_CLAVE_ANON
+@service = PEGA_AQUI_LA_CLAVE_SERVICE_ROLE
+
+### Salud del servicio
+GET {{url}}/health
+
+### Registrar usuario
+POST {{url}}/auth/v1/signup
+apikey: {{anon}}
+Content-Type: application/json
+
+{ "email": "ana@example.com", "password": "password123", "data": { "nombre": "Ana" } }
+
+### Iniciar sesión (copia el access_token en @token)
+# @name login
+POST {{url}}/auth/v1/login
+apikey: {{anon}}
+Content-Type: application/json
+
+{ "email": "ana@example.com", "password": "password123" }
+
+###
+@token = {{login.response.body.access_token}}
+
+### Crear tabla (SQL runner, solo service_role). Una sentencia por petición.
+POST {{url}}/rest/v1/_sql
+apikey: {{service}}
+Authorization: Bearer {{service}}
+Content-Type: application/json
+
+{ "query": "CREATE TABLE tareas (id serial PRIMARY KEY, owner uuid DEFAULT auth.uid(), titulo text NOT NULL, hecha boolean DEFAULT false)" }
+
+### Activar RLS
+POST {{url}}/rest/v1/_sql
+apikey: {{service}}
+Authorization: Bearer {{service}}
+Content-Type: application/json
+
+{ "query": "ALTER TABLE tareas ENABLE ROW LEVEL SECURITY" }
+
+### Política: cada usuario solo ve y modifica sus filas (no uses "TO authenticated": usa auth.uid())
+POST {{url}}/rest/v1/_sql
+apikey: {{service}}
+Authorization: Bearer {{service}}
+Content-Type: application/json
+
+{ "query": "CREATE POLICY propias ON tareas USING (owner = auth.uid()) WITH CHECK (owner = auth.uid())" }
+
+### Insertar como usuario
+POST {{url}}/rest/v1/tareas
+apikey: {{anon}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "titulo": "Aprender baas_platform" }
+
+### Leer con filtros, orden y paginación
+GET {{url}}/rest/v1/tareas?hecha=eq.false&order=id.desc&limit=10&select=id,titulo
+apikey: {{anon}}
+Authorization: Bearer {{token}}
+Prefer: count=exact
+
+### Actualizar (requiere filtro)
+PATCH {{url}}/rest/v1/tareas?id=eq.1
+apikey: {{anon}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "hecha": true }
+
+### Activar realtime en la tabla
+POST {{url}}/realtime/v1/enable/tareas
+apikey: {{service}}
+Authorization: Bearer {{service}}
+
+### Crear bucket
+POST {{url}}/storage/v1/bucket
+apikey: {{service}}
+Authorization: Bearer {{service}}
+Content-Type: application/json
+
+{ "name": "avatares", "public": true }
+
+### Desplegar una función Python
+PUT {{url}}/functions/v1/saludar
+apikey: {{service}}
+Authorization: Bearer {{service}}
+Content-Type: application/json
+
+{ "code": "def handler(event):\n    nombre = (event.get('body') or {}).get('nombre', 'mundo')\n    return {'mensaje': f'Hola, {nombre}!'}\n" }
+
+### Invocar la función
+POST {{url}}/functions/v1/saludar
+apikey: {{service}}
+Authorization: Bearer {{service}}
+Content-Type: application/json
+
+{ "nombre": "Ana" }
+
+### Registrar un webhook para cambios en la tabla
+POST {{url}}/webhooks/v1
+apikey: {{service}}
+Authorization: Bearer {{service}}
+Content-Type: application/json
+
+{ "url": "https://webhook.site/TU-ID", "events": ["tareas:INSERT"] }
